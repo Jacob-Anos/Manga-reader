@@ -6,7 +6,6 @@ Thumbs.db
 .idea/
 .vscode/
 
-
 # Node / build nástroje (pokud bys použil)
 node_modules/
 *.log
@@ -14,14 +13,12 @@ node_modules/
 dist/
 build/
 
-
 # PWA cache exporty (jen pro jistotu)
 *.localcache
-
 
 # Zálohy
 *.bak
 *.tmp
 
-
 </script>
+
