@@ -1,0 +1,27 @@
+<script type="text/plain" id="gitignore-file">
+# OS a editor artefakty
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+
+# Node / build nástroje (pokud bys použil)
+node_modules/
+*.log
+.cache/
+dist/
+build/
+
+
+# PWA cache exporty (jen pro jistotu)
+*.localcache
+
+
+# Zálohy
+*.bak
+*.tmp
+
+
+</script>
