@@ -1,72 +1,80 @@
 <!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Manga / Manhwa Tracker – PWA</title>
-  <meta name="theme-color" content="#151835" />
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MangaTracker">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="icon" type="image/png" href="icon-192.png">
-  <style>
-    :root{--bg:#0f1220;--card:#151835;--muted:#8ea3c2;--text:#e8eeff;--accent:#6ea8ff;--danger:#ff7a7a;}
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-    .wrap{max-width:980px;margin:0 auto;padding:16px 14px 120px}
-    header{position:sticky;top:0;background:linear-gradient(180deg,rgba(15,18,32,.98),rgba(15,18,32,.85),rgba(15,18,32,0));backdrop-filter:blur(6px);padding:10px 0;margin-bottom:10px}
-    h1{font-size:22px;margin:0 0 6px}
-    .muted{color:var(--muted);font-size:13px}
-    input,button,select{border:none;outline:none;border-radius:10px;padding:8px 10px;background:#1b1f3b;color:white}
-    button{cursor:pointer}
-    .card{background:var(--card);border-radius:10px;padding:14px;margin:8px 0}
-    .grid{display:grid;gap:10px}
-    @media(min-width:700px){.grid{grid-template-columns:1fr 1fr}}
-    .item{display:flex;flex-direction:column;gap:10px}
-    .badge{font-size:12px;background:#0c1130;border:1px solid #24306b;padding:3px 8px;border-radius:999px}
-    .actions{display:flex;gap:6px;flex-wrap:wrap}
-    .note{font-size:12px;color:var(--muted)}
-    .footer{position:fixed;bottom:0;left:0;right:0;background:rgba(15,18,32,.9);backdrop-filter:blur(8px);padding:12px}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>📚 Manga / Manhwa Tracker <span class="muted">(PWA)</span></h1>
-      <div class="muted">Sleduj rozčtené série, pokračuj, označ dočtené. Funguje offline.</div>
-      <div class="row" id="installRow" style="display:none;margin-top:8px">
-        <button id="btnInstall">➕ Nainstalovat aplikaci</button>
-      </div>
-    </header>
-
-    <section class="card">
-      <input id="title" placeholder="Název série" />
-      <input id="template" placeholder="URL šablona (např. https://manga.com/chapter/{n})" />
-      <input id="lastUrl" placeholder="Poslední URL (pokud nemáš šablonu)" />
-      <input id="chapter" type="number" placeholder="Kapitola" />
-      <select id="status"><option value="reading">Čtu</option><option value="paused">Pozastaveno</option><option value="finished">Dočteno</option></select>
-      <button onclick="addSeries()">Přidat</button>
-    </section>
-
-    <section id="list" class="grid"></section>
-    <div class="footer"><div class="muted">Otevři v Safari → Sdílet → Přidat na plochu (nebo v Chrome → Nainstalovat).</div></div>
-  </div>
-
 <script>
-const KEY='manga_tracker_v1';let items=[];
-function save(){localStorage.setItem(KEY,JSON.stringify(items));}
-function load(){try{items=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){items=[]}}
-function uid(){return Math.random().toString(36).slice(2)}
-function addSeries(){const t=title.value.trim(),tpl=template.value.trim(),u=lastUrl.value.trim(),c=Number(chapter.value)||0,s=status.value;if(!t)return alert('Zadej název');if(!tpl&&!u)return alert('Vyplň URL');items.unshift({id:uid(),title:t,template:tpl||undefined,lastUrl:u||undefined,chapter:c,status:s,updated:Date.now()});save();render();}
-function removeItem(id){if(!confirm('Odebrat sérii?'))return;items=items.filter(x=>x.id!==id);save();render();}
-function makeUrl(it){return it.template?it.template.replace('{n}',String(it.chapter||0)):it.lastUrl||''}
-function nextChapter(id){const it=items.find(x=>x.id===id);if(!it)return;it.chapter++;save();render();window.open(makeUrl(it),'_blank')}
-function toggleFinished(id){const it=items.find(x=>x.id===id);it.status=it.status==='finished'?'reading':'finished';save();render();}
-function render(){const list=document.getElementById('list');list.innerHTML='';items.sort((a,b)=>b.updated-a.updated).forEach(it=>{const c=document.createElement('div');c.className='card item';c.innerHTML=`<b>${it.title}</b><div>${it.status}</div><div class=\"actions\"><button onclick=\"window.open('${makeUrl(it)}','_blank')\">Otevřít</button><button onclick=\"nextChapter('${it.id}')\">+1</button><button onclick=\"toggleFinished('${it.id}')\">✔</button><button onclick=\"removeItem('${it.id}')\">🗑️</button></div>`;list.appendChild(c);})}
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'))}
-let deferredPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;installRow.style.display='block';});btnInstall.onclick=async()=>{deferredPrompt.prompt();await deferredPrompt.userChoice;installRow.style.display='none';};
-load();render();
+const KEY = 'manga_tracker_v1';
+let items = [];
+function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
+function load(){ try{ items = JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ items=[] } }
+function uid(){ return Math.random().toString(36).slice(2)+Date.now().toString(36) }
+function fmtCount(n){ return n+ (n===1?' položka':' položek') }
+function addSeries(){
+const title = document.getElementById('title').value.trim();
+const template = document.getElementById('template').value.trim();
+const lastUrl = document.getElementById('lastUrl').value.trim();
+const chapter = Number(document.getElementById('chapter').value||0);
+const status = document.getElementById('status').value;
+if(!title) return alert('Zadej název série');
+if(!template && !lastUrl) return alert('Vyplň buď URL šablonu nebo poslední URL.');
+items.unshift({id:uid(), title, template:template||undefined, lastUrl:lastUrl||undefined, chapter:isNaN(chapter)?0:chapter, status, updated:Date.now()});
+save(); clearForm(); render();
+}
+function clearForm(){ ['title','template','lastUrl','chapter'].forEach(id=>document.getElementById(id).value=''); document.getElementById('status').value='reading' }
+function updateItem(id, patch){ const i = items.findIndex(x=>x.id===id); if(i<0) return; items[i] = {...items[i], ...patch, updated:Date.now()}; save(); render(); }
+function removeItem(id){ if(!confirm('Odebrat tuto sérii?')) return; items = items.filter(x=>x.id!==id); save(); render(); }
+function makeUrl(it){ if(it.template){ return it.template.replace('{n}', String(it.chapter||0)); } return it.lastUrl||''; }
+function openCurrent(id){ const it = items.find(x=>x.id===id); if(!it) return; const url = makeUrl(it); if(!url){ return alert('Nemám URL – doplň šablonu nebo poslední URL.'); } window.open(url,'_blank'); }
+function nextChapter(id){ const it = items.find(x=>x.id===id); if(!it) return; if(typeof it.chapter !== 'number') it.chapter = 0; it.chapter += 1; it.status = 'reading'; it.updated = Date.now(); save(); render(); const url = makeUrl(it); if(url) window.open(url,'_blank'); }
+function setChapter(id){ const it = items.find(x=>x.id===id); if(!it) return; const v = prompt('Nastav kapitolu na:', it.chapter||0); if(v===null) return; const n = Number(v); if(Number.isNaN(n)) return alert('Číslo kapitoly musí být číslo'); updateItem(id,{chapter:n}); }
+function setLastUrl(id){ const it = items.find(x=>x.id===id); if(!it) return; const v = prompt('Vlož/změň poslední URL:', it.lastUrl||''); if(v===null) return; updateItem(id,{lastUrl:v.trim()||undefined}); }
+function setTemplate(id){ const it = items.find(x=>x.id===id); if(!it) return; const v = prompt('URL šablona s {n}:', it.template||''); if(v===null) return; updateItem(id,{template:v.trim()||undefined}); }
+function toggleFinished(id){ const it = items.find(x=>x.id===id); if(!it) return; updateItem(id,{status: it.status==='finished' ? 'reading' : 'finished'}); }
+function render(){
+const q = document.getElementById('search').value.trim().toLowerCase();
+const f = document.getElementById('filter').value;
+const list = document.getElementById('list');
+const filtered = items.filter(it=> (f==='all'||it.status===f) && (!q || it.title.toLowerCase().includes(q)) ).sort((a,b)=> b.updated - a.updated);
+document.getElementById('count').textContent = fmtCount(filtered.length);
+list.innerHTML = '';
+if(filtered.length===0){
+const empty = document.createElement('div'); empty.className='card'; empty.innerHTML = '<div class="muted">Nic tu není. Přidej první sérii výše. 👆</div>'; list.appendChild(empty); return;
+}
+filtered.forEach(it=>{
+const card = document.createElement('div'); card.className='card item';
+const head = document.createElement('div'); head.className='item-head';
+const t = document.createElement('div'); t.className='title'; t.textContent = it.title; head.appendChild(t);
+const badges = document.createElement('div'); badges.className='badges';
+const b1 = document.createElement('span'); b1.className='badge'; b1.textContent = 'Kapitola: '+(it.chapter??'-'); badges.appendChild(b1);
+const b2 = document.createElement('span'); b2.className='badge'; b2.textContent = it.status==='finished'?'Dočteno': it.status==='paused'?'Pozastaveno':'Čtu'; badges.appendChild(b2);
+if(it.template){ const b3=document.createElement('span'); b3.className='badge'; b3.textContent='Šablona ✓'; badges.appendChild(b3); }
+if(it.lastUrl){ const b4=document.createElement('span'); b4.className='badge'; b4.textContent='Poslední URL ✓'; badges.appendChild(b4); }
+head.appendChild(badges);
+const actions = document.createElement('div'); actions.className='actions';
+const btnOpen = document.createElement('button'); btnOpen.textContent='Otevřít'; btnOpen.className='primary small'; btnOpen.onclick=()=>openCurrent(it.id); actions.appendChild(btnOpen);
+const btnNext = document.createElement('button'); btnNext.textContent='+1 kapitola & otevřít'; btnNext.className='small'; btnNext.onclick=()=>nextChapter(it.id); actions.appendChild(btnNext);
+const btnSetCh = document.createElement('button'); btnSetCh.textContent='Nastavit kapitolu'; btnSetCh.className='ghost small'; btnSetCh.onclick=()=>setChapter(it.id); actions.appendChild(btnSetCh);
+const btnSetTpl = document.createElement('button'); btnSetTpl.textContent='URL šablona'; btnSetTpl.className='ghost small'; btnSetTpl.onclick=()=>setTemplate(it.id); actions.appendChild(btnSetTpl);
+const btnSetUrl = document.createElement('button'); btnSetUrl.textContent='Poslední URL'; btnSetUrl.className='ghost small'; btnSetUrl.onclick=()=>setLastUrl(it.id); actions.appendChild(btnSetUrl);
+const btnDone = document.createElement('button'); btnDone.textContent= (it.status==='finished'?'Vrátit do čtení':'Označit dočteno'); btnDone.className='success small'; btnDone.onclick=()=>toggleFinished(it.id); actions.appendChild(btnDone);
+const btnDel = document.createElement('button'); btnDel.textContent='Odebrat'; btnDel.className='warn small'; btnDel.onclick=()=>removeItem(it.id); actions.appendChild(btnDel);
+const note = document.createElement('div'); note.className='note';
+note.innerHTML = 'Aktuální URL: ' + (makeUrl(it) ? `<a class="link" href="${makeUrl(it)}" target="_blank">${makeUrl(it)}</a>` : '<i>nenastaveno</i>');
+card.appendChild(head); card.appendChild(actions); card.appendChild(document.createElement('div')).className='sep'; card.appendChild(note); list.appendChild(card);
+})
+}
+function exportData(){ const data = JSON.stringify(items, null, 2); const blob = new Blob([data], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'manga-tracker.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); }
+function importData(input){ const file = input.files?.[0]; if(!file) return; const reader = new FileReader(); reader.onload = () => { try{ const arr = JSON.parse(reader.result); if(!Array.isArray(arr)) throw new Error('Neplatný JSON'); const key = o=> (o.title||'')+'|'+(o.template||'')+'|'+(o.lastUrl||''); const map = new Map(items.map(x=>[key(x),x])); for(const o of arr){ const k = key(o); if(map.has(k)){ const ex = map.get(k); ex.chapter = Math.max(Number(ex.chapter||0), Number(o.chapter||0)); ex.status = o.status||ex.status||'reading'; ex.updated = Math.max(Number(ex.updated||0), Number(o.updated||0)); } else { map.set(k, {id:uid(), title:o.title||'Bez názvu', chapter:Number(o.chapter||0)||0, status:o.status||'reading', template:o.template||undefined, lastUrl:o.lastUrl||undefined, updated:Number(o.updated||Date.now())}); } } items = Array.from(map.values()); save(); render(); input.value=''; alert('Import hotový.'); }catch(e){ alert('Import selhal: '+e.message) } }; reader.readAsText(file); }
+
+
+// === PWA část: registrace SW a instalace ===
+if('serviceWorker' in navigator){
+window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./service-worker.js').catch(console.error) })
+}
+let deferredPrompt; const installRow = document.getElementById('installRow'); const btnInstall = document.getElementById('btnInstall');
+window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt = e; installRow.style.display='flex'; });
+btnInstall?.addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if(outcome!=='accepted'){ /* user dismissed */ } deferredPrompt = null; installRow.style.display='none'; });
+
+
+// Init
+load(); render();
 </script>
 </body>
 </html>
