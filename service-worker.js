@@ -1,5 +1,5 @@
 // Zvýš verzi při každé změně, ať se update spolehlivě načte
-const CACHE_NAME = 'manga-tracker-v11';
+const CACHE_NAME = 'manga-tracker-v12';
 
 // Absolutní URL v rámci scope (funguje v podsložce /manga-tracker/)
 const scope = new URL(self.registration.scope); // např. https://user.github.io/manga-tracker/
@@ -70,4 +70,5 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
 
